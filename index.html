@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>我的配件查询目录</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 20px; background: #f4f4f4; }
+        .container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; }
+        
+        /* 左侧侧边栏 */
+        .sidebar { width: 300px; background: #fff; padding: 20px; border-radius: 8px; height: 80vh; overflow-y: auto; }
+        .sidebar h3 { margin-top: 0; }
+        select { width: 100%; padding: 8px; margin-bottom: 10px; }
+        
+        /* 右侧结果区 */
+        .results { flex: 1; background: #fff; padding: 20px; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #007BFF; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        
+        /* 搜索框 */
+        .search-box { margin-bottom: 15px; }
+        .search-box input { width: 90%; padding: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 左侧筛选 -->
+    <div class="sidebar">
+        <h3>🚗 选车查询</h3>
+        <select id="brandSelect"><option>请选择品牌</option></select>
+        <select id="modelSelect" disabled><option>请选择车型</option></select>
+        
+        <div class="search-box">
+            <h3>🔍 OE号反查</h3>
+            <input type="text" id="oeSearch" placeholder="输入 OE 号 (如 04465...)">
+            <button onclick="searchOE()" style="width:100%; padding: 8px; margin-top:5px;">查询</button>
+        </div>
+    </div>
+
+    <!-- 右侧列表 -->
+    <div class="results">
+        <h2 id="resultTitle">配件列表</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>品牌</th>
+                    <th>车型</th>
+                    <th>OE 号</th>
+                    <th>我的编号</th>
+                    <th>位置</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- 数据会插在这里 -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let allData = [];
+
+    // 1. 加载数据
+    fetch('data.json')
+        .then(response => response.json())
+        .then(data => {
+            allData = data;
+            initBrands();
+        });
+
+    // 2. 初始化品牌下拉框
+    function initBrands() {
+        const brands = [...new Set(allData.map(item => item.brand))]; // 去重
+        const brandSelect = document.getElementById('brandSelect');
+        brands.forEach(brand => {
+            let option = document.createElement('option');
+            option.text = brand;
+            brandSelect.add(option);
+        });
+    }
+
+    // 3. 车型联动
+    document.getElementById('brandSelect').addEventListener('change', function() {
+        const selectedBrand = this.value;
+        const modelSelect = document.getElementById('modelSelect');
+        modelSelect.innerHTML = '<option>请选择车型</option>'; // 清空
+        
+        if (selectedBrand !== "请选择品牌") {
+            const models = [...new Set(allData.filter(item => item.brand === selectedBrand).map(item => item.model))];
+            models.forEach(model => {
+                let option = document.createElement('option');
+                option.text = model;
+                modelSelect.add(option);
+            });
+            modelSelect.disabled = false;
+        } else {
+            modelSelect.disabled = true;
+            document.getElementById('tableBody').innerHTML = '';
+        }
+    });
+
+    // 4. 显示结果 (按车型)
+    document.getElementById('modelSelect').addEventListener('change', function() {
+        const selectedBrand = document.getElementById('brandSelect').value;
+        const selectedModel = this.value;
+        
+        const filtered = allData.filter(item => item.brand === selectedBrand && item.model === selectedModel);
+        renderTable(filtered);
+    });
+
+    // 5. OE号搜索功能
+    function searchOE() {
+        const keyword = document.getElementById('oeSearch').value.toLowerCase();
+        const filtered = allData.filter(item => item.oe_number.toLowerCase().includes(keyword));
+        renderTable(filtered);
+    }
+
+    // 6. 渲染表格
+    function renderTable(data) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        data.forEach(item => {
+            let row = `<tr>
+                <td>${item.brand}</td>
+                <td>${item.model}</td>
+                <td><b>${item.oe_number}</b></td>
+                <td>${item.your_brand_number}</td>
+                <td>${item.position}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+    }
+</script>
+
+</body>
+</html>
