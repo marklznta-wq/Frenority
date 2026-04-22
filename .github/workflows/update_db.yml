@@ -1,0 +1,33 @@
+name: Auto Update Database
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天 UTC 0点运行 (北京时间早上8点)
+  workflow_dispatch:     # 允许手动点击按钮运行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # 使用 Ubuntu 服务器环境
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v3
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: 安装依赖库
+        run: |
+          pip install requests beautifulsoup4 lxml
+
+      - name: 运行爬虫脚本
+        run: python scraper.py
+
+      - name: 保存并推送更新
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+          git add data.json
+          # 如果有变动才提交，否则会报错
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto update data" && git push)
